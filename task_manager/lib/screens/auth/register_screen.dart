@@ -16,31 +16,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
 
   void _handleRegister() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mật khẩu xác nhận không khớp')),
+    try {
+      await _authService.register(
+        _fullNameController.text,
+        _emailController.text,
+        _passwordController.text,
       );
-      return;
-    }
 
-    setState(() => _isLoading = true);
-
-    final success = await AuthService().register(
-      _nameController.text,
-      _emailController.text,
-      _passwordController.text,
-    );
-
-    setState(() => _isLoading = false);
-
-    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Đăng ký thành công! Hãy đăng nhập.')),
       );
-      Navigator.pop(context);
-    } else {
+      Navigator.pop(context); // Chuyển về màn đăng nhập
+    } catch (e) {
+      // Hiển thị lỗi thực sự thay vì chuỗi hardcode
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đăng ký thất bại. Email có thể đã tồn tại.')),
+        SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }

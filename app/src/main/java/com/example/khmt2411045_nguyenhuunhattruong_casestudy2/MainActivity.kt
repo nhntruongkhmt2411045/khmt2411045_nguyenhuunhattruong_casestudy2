@@ -3,42 +3,45 @@ package com.example.khmt2411045_nguyenhuunhattruong_casestudy2
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.example.khmt2411045_nguyenhuunhattruong_casestudy2.ui.screens.TaskListScreen
-import com.example.khmt2411045_nguyenhuunhattruong_casestudy2.ui.screens.CreateTaskScreen
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.khmt2411045_nguyenhuunhattruong_casestudy2.ui.theme.Khmt2411045_nguyenhuunhattruong_casestudy2Theme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    // Trạng thái chuyển đổi màn hình đơn giản
-                    var currentScreen by remember { mutableStateOf("list") }
-
-                    if (currentScreen == "list") {
-                        TaskListScreen(
-                            tasks = emptyList(), // Truyền danh sách task lấy từ API vào đây
-                            onAddTaskClick = { currentScreen = "create" }
-                        )
-                    } else {
-                        CreateTaskScreen(
-                            onCreateTask = { title, desc ->
-                                // Gọi API tạo Task tại đây
-                                currentScreen = "list"
-                            },
-                            onBack = { currentScreen = "list" }
-                        )
-                    }
+            Khmt2411045_nguyenhuunhattruong_casestudy2Theme {
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Greeting(
+                        name = "Android",
+                        modifier = Modifier.padding(innerPadding)
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+fun Greeting(name: String, modifier: Modifier = Modifier) {
+    Text(
+        text = "Hello $name!",
+        modifier = modifier
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    Khmt2411045_nguyenhuunhattruong_casestudy2Theme {
+        Greeting("Android")
     }
 }
