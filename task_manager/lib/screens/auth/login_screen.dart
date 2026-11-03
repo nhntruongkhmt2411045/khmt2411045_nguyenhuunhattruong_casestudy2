@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
+import '../dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,29 +30,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final success = await AuthService().login(
-        emailController.text,
+        emailController.text.trim(),
         passwordController.text,
       );
 
       if (!mounted) return;
 
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Đăng nhập thành công'),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const DashboardScreen(),
           ),
+              (route) => false,
         );
-
-        // Chuyển đến màn hình chính
-        // Thay HomeScreen bằng màn hình Home thực tế
-        // của project nếu tên khác.
       }
     } catch (error) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error.toString()),
+          content: Text('Lỗi đăng nhập: $error'),
+          backgroundColor: Colors.red,
         ),
       );
     } finally {
@@ -67,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     emailController.dispose();
     passwordController.dispose();
-
     super.dispose();
   }
 
@@ -76,83 +74,143 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Đăng nhập'),
+        centerTitle: true,
+        backgroundColor: const Color(0xFF2878E8),
+        foregroundColor: Colors.white,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
+
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+
+          child: Form(
+            key: _formKey,
+
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+
+              children: [
+                const Icon(
+                  Icons.task_alt,
+                  size: 80,
+                  color: Color(0xFF2878E8),
                 ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Vui lòng nhập email';
-                  }
 
-                  if (!value.contains('@')) {
-                    return 'Email không hợp lệ';
-                  }
+                const SizedBox(height: 16),
 
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: passwordController,
-                obscureText: obscurePassword,
-                decoration: InputDecoration(
-                  labelText: 'Mật khẩu',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      obscurePassword
-                          ? Icons.visibility_off
-                          : Icons.visibility,
-                    ),
-                    onPressed: () {
-                      setState(() {
-                        obscurePassword = !obscurePassword;
-                      });
-                    },
+                const Text(
+                  'Task Manager',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Vui lòng nhập mật khẩu';
-                  }
 
-                  return null;
-                },
-              ),
+                const SizedBox(height: 8),
 
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: isLoading ? null : login,
-                  child: isLoading
-                      ? const CircularProgressIndicator()
-                      : const Text('Đăng nhập'),
+                const Text(
+                  'Đăng nhập để quản lý công việc',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 15,
+                  ),
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 32),
+
+                TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                    hintText: 'Nhập email của bạn',
+                    prefixIcon: Icon(Icons.email_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Vui lòng nhập email';
+                    }
+
+                    if (!value.contains('@')) {
+                      return 'Email không hợp lệ';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 16),
+
+                TextFormField(
+                  controller: passwordController,
+                  obscureText: obscurePassword,
+
+                  decoration: InputDecoration(
+                    labelText: 'Mật khẩu',
+                    hintText: 'Nhập mật khẩu',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: const OutlineInputBorder(),
+
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+
+                      onPressed: () {
+                        setState(() {
+                          obscurePassword = !obscurePassword;
+                        });
+                      },
+                    ),
+                  ),
+
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Vui lòng nhập mật khẩu';
+                    }
+
+                    return null;
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                SizedBox(
+                  height: 50,
+
+                  child: ElevatedButton(
+                    onPressed: isLoading ? null : login,
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2878E8),
+                      foregroundColor: Colors.white,
+                    ),
+
+                    child: isLoading
+                        ? const CircularProgressIndicator(
+                      color: Colors.white,
+                    )
+                        : const Text(
+                      'ĐĂNG NHẬP',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 }
-final success = await AuthService().login(
-emailController.text,
-passwordController.text,
-);

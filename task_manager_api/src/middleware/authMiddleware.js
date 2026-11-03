@@ -1,13 +1,41 @@
-// src/middleware/authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
     try {
-        const token = req.headers.authorization.split(" ")[1]; // Lấy token từ header "Bearer <token>"
-        const decoded = jwt.verify(token, process.env.JWT_SECRET); // Dùng biến môi trường cho JWT secret
-        req.userId = decoded.userId; // Lưu userId vào request để controller sử dụng
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                message: 'Vui lòng đăng nhập'
+            });
+        }
+
+        const token = authHeader.split(' ')[1];
+
+        if (!process.env.JWT_SECRET) {
+            return res.status(500).json({
+                message: 'Server chưa cấu hình JWT_SECRET'
+            });
+        }
+
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET
+        );
+
+        req.userId = decoded.userId;
+
+        // Đồng bộ với Task Controller
+        req.user = {
+            id: decoded.userId
+        };
+
         next();
+
     } catch (error) {
-        return res.status(401).json({ message: 'Không có quyền truy cập. Token không hợp lệ hoặc đã hết hạn.' });
+        return res.status(401).json({
+            message: 'Token không hợp lệ hoặc đã hết hạn'
+        });
     }
 };

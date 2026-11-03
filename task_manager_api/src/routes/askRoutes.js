@@ -1,18 +1,27 @@
+
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
-const {
-    getTasks,
-    createTask,
-    getTaskById,
-    updateTask,
-    deleteTask
-} = require('../controllers/taskController');
 
-router.get('/', auth, getTasks);
-router.post('/', auth, createTask);
-router.get('/:id', auth, getTaskById);
-router.put('/:id', auth, updateTask);
-router.delete('/:id', auth, deleteTask);
+const authMiddleware = require('../middleware/authMiddleware');
+
+const taskController = require('../controllers/taskController');
+
+// Tất cả API task đều cần đăng nhập
+router.use(authMiddleware);
+
+// Lấy danh sách
+router.get('/', taskController.getTasks);
+
+// Tạo công việc
+router.post('/', taskController.createTask);
+
+// Xem chi tiết
+router.get('/:id', taskController.getTaskById);
+
+// Cập nhật
+router.put('/:id', taskController.updateTask);
+
+// Xóa
+router.delete('/:id', taskController.deleteTask);
 
 module.exports = router;

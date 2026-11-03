@@ -1,86 +1,188 @@
+
 const Task = require('../models/Task');
 
-// 1. Lấy danh sách công việc (có tìm kiếm, lọc theo trạng thái/mức ưu tiên)
+// Lấy danh sách công việc
 exports.getTasks = async (req, res) => {
     try {
         const { status, priority, q } = req.query;
-        let query = {
+
+        const query = {
             $or: [
-                { createdBy: req.user.id },
-                { assigneeIds: req.user.id }
+                { createdBy: req.userId },
+                { assigneeIds: req.userId }
             ]
         };
 
-        if (status) query.status = status;
-        if (priority) query.priority = priority;
-        if (q) query.title = { $regex: q, $options: 'i' };
+        if (status) {
+            query.status = status;
+        }
+
+        if (priority) {
+            query.priority = priority;
+        }
+
+        if (q) {
+            query.title = {
+                $regex: q,
+                $options: 'i'
+            };
+        }
 
         const tasks = await Task.find(query)
             .populate('createdBy', 'fullName email')
+            .populate('assigneeIds', 'fullName email')
             .populate('primaryAssigneeId', 'fullName email')
             .sort({ createdAt: -1 });
 
-        res.json(tasks);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        return res.status(200).json(tasks);
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Lỗi lấy danh sách công việc',
+            error: error.message
+        });
     }
 };
 
-// 2. Tạo công việc mới
+// Tạo công việc
 exports.createTask = async (req, res) => {
     try {
-        const { title, description, startDate, dueDate, priority, status } = req.body;
-        const newTask = new Task({
+        const {
             title,
             description,
             startDate,
             dueDate,
+            priority,
+            status
+        } = req.body;
+
+        if (!title || !title.trim()) {
+            return res.status(400).json({
+                message: 'Tên công việc không được để trống'
+            });
+        }
+
+        const newTask = await Task.create({
+            title: title.trim(),
+            description: description || '',
+            startDate: startDate || null,
+            dueDate: dueDate || null,
             priority: priority || 'medium',
             status: status || 'todo',
-            createdBy: req.user.id
+            createdBy: req.userId,
+            assigneeIds: [req.userId],
+            primaryAssigneeId: req.userId
         });
-        await newTask.save();
-        res.status(201).json(newTask);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+
+        return res.status(201).json(newTask);
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Lỗi tạo công việc',
+            error: error.message
+        });
     }
 };
 
-// 3. Xem chi tiết công việc
+// Xem chi tiết công việc
 exports.getTaskById = async (req, res) => {
     try {
-        const task = await Task.findById(req.params.id)
+        const task = await Task.findOne({
+            _id: req.params.id,
+            $or: [
+                { createdBy: req.userId },
+                { assigneeIds: req.userId }
+            ]
+        })
             .populate('createdBy', 'fullName email')
             .populate('assigneeIds', 'fullName email');
-        if (!task) return res.status(404).json({ message: 'Không tìm thấy công việc' });
-        res.json(task);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc'
+            });
+        }
+
+        return res.status(200).json(task);
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Lỗi lấy công việc',
+            error: error.message
+        });
     }
 };
 
-// 4. Cập nhật thông tin công việc
+// Cập nhật công việc
 exports.updateTask = async (req, res) => {
     try {
-        const task = await Task.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body, updatedAt: Date.now() },
-            { new: true }
+        const allowedFields = [
+            'title',
+            'description',
+            'startDate',
+            'dueDate',
+            'priority',
+            'status'
+        ];
+
+        const updateData = {};
+
+        for (const field of allowedFields) {
+            if (req.body[field] !== undefined) {
+                updateData[field] = req.body[field];
+            }
+        }
+
+        const task = await Task.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                createdBy: req.userId
+            },
+            updateData,
+            {
+                new: true,
+                runValidators: true
+            }
         );
-        if (!task) return res.status(404).json({ message: 'Không tìm thấy công việc' });
-        res.json(task);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền sửa'
+            });
+        }
+
+        return res.status(200).json(task);
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Lỗi cập nhật công việc',
+            error: error.message
+        });
     }
 };
 
-// 5. Xóa công việc
+// Xóa công việc
 exports.deleteTask = async (req, res) => {
     try {
-        const task = await Task.findByIdAndDelete(req.params.id);
-        if (!task) return res.status(404).json({ message: 'Không tìm thấy công việc' });
-        res.json({ message: 'Đã xóa công việc thành công' });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+        const task = await Task.findOneAndDelete({
+            _id: req.params.id,
+            createdBy: req.userId
+        });
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền xóa'
+            });
+        }
+
+        return res.status(200).json({
+            message: 'Đã xóa công việc thành công'
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Lỗi xóa công việc',
+            error: error.message
+        });
     }
 };
