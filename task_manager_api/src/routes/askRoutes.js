@@ -1,6 +1,9 @@
+
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/authMiddleware');
+
+const { protect } = require('../middleware/authMiddleware');
+
 const {
     getTasks,
     createTask,
@@ -9,10 +12,19 @@ const {
     deleteTask
 } = require('../controllers/taskController');
 
-router.get('/', auth, getTasks);
-router.post('/', auth, createTask);
-router.get('/:id', auth, getTaskById);
-router.put('/:id', auth, updateTask);
-router.delete('/:id', auth, deleteTask);
+// Lấy danh sách công việc
+router.get('/', protect, getTasks);
+
+// Tạo công việc
+router.post('/', protect, createTask);
+
+// Xem chi tiết công việc
+router.get('/:id', protect, getTaskById);
+
+// Cập nhật công việc
+router.put('/:id', protect, updateTask);
+
+// Xóa công việc
+router.delete('/:id', protect, deleteTask);
 
 module.exports = router;

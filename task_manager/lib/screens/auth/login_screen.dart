@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import 'register_screen.dart';
-import '../profile/profile_screen.dart';
+import '../dashboard/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -47,13 +47,15 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => const ProfileScreen(),
+          builder: (context) => const DashboardScreen(),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.'),
+          content: Text(
+            'Đăng nhập thất bại. Vui lòng kiểm tra email và mật khẩu.',
+          ),
         ),
       );
     }
@@ -140,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
               children: [
                 const SizedBox(height: 15),
 
-                // BIEU TUONG TAI KHOAN
                 Container(
                   width: 125,
                   height: 125,
@@ -179,7 +180,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 35),
 
-                // EMAIL
                 _buildInput(
                   label: 'Email',
                   icon: Icons.email_outlined,
@@ -188,7 +188,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // MAT KHAU
                 _buildInput(
                   label: 'Mật khẩu',
                   icon: Icons.lock_outline,
@@ -198,7 +197,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 30),
 
-                // NUT DANG NHAP
                 SizedBox(
                   width: double.infinity,
                   height: 58,
@@ -233,7 +231,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // CHUYEN SANG DANG KY
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [

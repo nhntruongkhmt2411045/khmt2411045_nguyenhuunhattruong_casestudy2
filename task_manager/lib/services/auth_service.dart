@@ -5,12 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-  // Tu dong chon dia chi Backend
+  // Dia chi Backend
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:3000/api/auth';
+      return 'http://localhost:5000/api/auth';
     }
-    return 'http://10.0.2.2:3000/api/auth';
+    return 'http://10.0.2.2:5000/api/auth';
   }
 
   // DANG NHAP
@@ -25,14 +25,14 @@ class AuthService {
         }),
       );
 
-      print('LOGIN STATUS: ${response.statusCode}');
-      print('LOGIN RESPONSE: ${response.body}');
+      debugPrint('LOGIN STATUS: ${response.statusCode}');
+      debugPrint('LOGIN RESPONSE: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
 
         if (data['token'] == null) {
-          print('Backend khong tra ve token');
+          debugPrint('Backend khong tra ve token');
           return false;
         }
 
@@ -43,7 +43,7 @@ class AuthService {
 
       return false;
     } catch (e) {
-      print('LOGIN ERROR: $e');
+      debugPrint('LOGIN ERROR: $e');
       return false;
     }
   }
@@ -65,12 +65,12 @@ class AuthService {
         }),
       );
 
-      print('REGISTER STATUS: ${response.statusCode}');
-      print('REGISTER RESPONSE: ${response.body}');
+      debugPrint('REGISTER STATUS: ${response.statusCode}');
+      debugPrint('REGISTER RESPONSE: ${response.body}');
 
       return response.statusCode == 201;
     } catch (e) {
-      print('REGISTER ERROR: $e');
+      debugPrint('REGISTER ERROR: $e');
       return false;
     }
   }
@@ -101,13 +101,13 @@ class AuthService {
         },
       );
 
-      print('PROFILE STATUS: ${response.statusCode}');
+      debugPrint('PROFILE STATUS: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
     } catch (e) {
-      print('PROFILE ERROR: $e');
+      debugPrint('PROFILE ERROR: $e');
     }
 
     return null;
@@ -131,10 +131,10 @@ class AuthService {
         }),
       );
 
-      print('UPDATE PROFILE STATUS: ${response.statusCode}');
+      debugPrint('UPDATE PROFILE STATUS: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
-      print('UPDATE PROFILE ERROR: $e');
+      debugPrint('UPDATE PROFILE ERROR: $e');
       return false;
     }
   }
@@ -161,10 +161,10 @@ class AuthService {
         }),
       );
 
-      print('CHANGE PASSWORD STATUS: ${response.statusCode}');
+      debugPrint('CHANGE PASSWORD STATUS: ${response.statusCode}');
       return response.statusCode == 200;
     } catch (e) {
-      print('CHANGE PASSWORD ERROR: $e');
+      debugPrint('CHANGE PASSWORD ERROR: $e');
       return false;
     }
   }
