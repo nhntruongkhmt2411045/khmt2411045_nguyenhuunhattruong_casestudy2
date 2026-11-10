@@ -1,12 +1,13 @@
 
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
-
+const User = require('../models/User');
 // Điều kiện xác định người dùng có liên quan đến công việc
 const accessCondition = (userId) => ({
     $or: [
         { createdBy: userId },
-        { assigneeIds: userId }
+        { assigneeIds: userId },
+        { 'sharedWith.userId': userId }
     ]
 });
 
@@ -127,7 +128,7 @@ exports.updateTask = async (req, res) => {
             });
         }
 
-        // Chỉ cho phép cập nhật các trường hợp lệ
+        // Các trường được phép cập nhật
         const allowedFields = [
             'title',
             'description',
@@ -147,12 +148,29 @@ exports.updateTask = async (req, res) => {
             }
         });
 
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({
+                message: 'Không có thông tin cần cập nhật'
+            });
+        }
+
+        // Chủ sở hữu hoặc người được chia sẻ quyền edit
         const task = await Task.findOneAndUpdate(
             {
                 _id: id,
-                createdBy: req.userId
+                $or: [
+                    { createdBy: req.userId },
+                    {
+                        sharedWith: {
+                            $elemMatch: {
+                                userId: req.userId,
+                                permission: 'edit'
+                            }
+                        }
+                    }
+                ]
             },
-            updateData,
+            { $set: updateData },
             {
                 new: true,
                 runValidators: true
@@ -171,7 +189,9 @@ exports.updateTask = async (req, res) => {
         });
 
     } catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(400).json({
+            error: err.message
+        });
     }
 };
 
@@ -201,6 +221,193 @@ exports.deleteTask = async (req, res) => {
             message: 'Đã xóa công việc thành công'
         });
 
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// 6. Chia sẻ công việc
+exports.shareTask = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { userId, permission = 'view' } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id) ||
+            !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                message: 'ID công việc hoặc người dùng không hợp lệ'
+            });
+        }
+
+        if (!['view', 'edit'].includes(permission)) {
+            return res.status(400).json({
+                message: 'Quyền phải là view hoặc edit'
+            });
+        }
+
+        const task = await Task.findOne({
+            _id: id,
+            createdBy: req.userId
+        });
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền chia sẻ'
+            });
+        }
+
+        if (userId === req.userId.toString()) {
+            return res.status(400).json({
+                message: 'Không thể chia sẻ công việc cho chính mình'
+            });
+        }
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({
+                message: 'Người dùng được chia sẻ không tồn tại'
+            });
+        }
+
+        const existingShare = task.sharedWith.find(
+            item => item.userId.toString() === userId
+        );
+
+        if (existingShare) {
+            existingShare.permission = permission;
+        } else {
+            task.sharedWith.push({
+                userId,
+                permission
+            });
+        }
+
+        await task.save();
+
+        res.json({
+            message: 'Chia sẻ công việc thành công',
+            task
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// 7. Xem danh sách người được chia sẻ
+exports.getTaskShares = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: 'ID công việc không hợp lệ'
+            });
+        }
+
+        const task = await Task.findOne({
+            _id: id,
+            createdBy: req.userId
+        }).populate('sharedWith.userId', 'fullName email avatarUrl');
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền'
+            });
+        }
+
+        res.json({
+            message: 'Lấy danh sách chia sẻ thành công',
+            sharedWith: task.sharedWith
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// 8. Thay đổi quyền chia sẻ
+exports.updateTaskShare = async (req, res) => {
+    try {
+        const { id, userId } = req.params;
+        const { permission } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id) ||
+            !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                message: 'ID không hợp lệ'
+            });
+        }
+
+        if (!['view', 'edit'].includes(permission)) {
+            return res.status(400).json({
+                message: 'Quyền phải là view hoặc edit'
+            });
+        }
+
+        const task = await Task.findOneAndUpdate(
+            {
+                _id: id,
+                createdBy: req.userId,
+                'sharedWith.userId': userId
+            },
+            {
+                $set: {
+                    'sharedWith.$.permission': permission
+                }
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc người được chia sẻ'
+            });
+        }
+
+        res.json({
+            message: 'Cập nhật quyền chia sẻ thành công',
+            task
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// 9. Thu hồi quyền chia sẻ
+exports.removeTaskShare = async (req, res) => {
+    try {
+        const { id, userId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(id) ||
+            !mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({
+                message: 'ID không hợp lệ'
+            });
+        }
+
+        const task = await Task.findOneAndUpdate(
+            {
+                _id: id,
+                createdBy: req.userId
+            },
+            {
+                $pull: {
+                    sharedWith: { userId }
+                }
+            },
+            { new: true }
+        );
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền'
+            });
+        }
+
+        res.json({
+            message: 'Thu hồi quyền chia sẻ thành công',
+            task
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

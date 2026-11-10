@@ -17,6 +17,9 @@ app.use('/api/auth', require('./routes/authRoutes'));
 // Routes quản lý công việc
 app.use('/api/tasks', require('./routes/taskRoutes'));
 
+// Routes người dùng
+app.use('/api/users', require('./routes/userRoutes'));
+
 // Kiểm tra server
 app.get('/', (req, res) => {
     res.json({

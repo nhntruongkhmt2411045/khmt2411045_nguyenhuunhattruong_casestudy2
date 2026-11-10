@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 
@@ -7,27 +6,28 @@ const {
     getTaskById,
     createTask,
     updateTask,
-    deleteTask
+    deleteTask,
+    shareTask,
+    getTaskShares,
+    updateTaskShare,
+    removeTaskShare
 } = require('../controllers/taskController');
 
 const { protect } = require('../middleware/authMiddleware');
 
-// Tất cả API công việc đều yêu cầu đăng nhập
 router.use(protect);
 
-// Lấy danh sách công việc
+// API chia sẻ công việc
+router.post('/:id/share', shareTask);
+router.get('/:id/shares', getTaskShares);
+router.put('/:id/share/:userId', updateTaskShare);
+router.delete('/:id/share/:userId', removeTaskShare);
+
+// API quản lý công việc
 router.get('/', getTasks);
-
-// Xem chi tiết công việc
 router.get('/:id', getTaskById);
-
-// Tạo công việc
 router.post('/', createTask);
-
-// Cập nhật công việc
 router.put('/:id', updateTask);
-
-// Xóa công việc
 router.delete('/:id', deleteTask);
 
 module.exports = router;
