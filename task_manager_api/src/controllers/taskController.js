@@ -2,6 +2,7 @@
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const User = require('../models/User');
+const { activity, notify, logEmailIntent } = require('../services/taskEvents');
 // Điều kiện xác định người dùng có liên quan đến công việc
 const accessCondition = (userId) => ({
     $or: [
@@ -74,6 +75,7 @@ exports.createTask = async (req, res) => {
         });
 
         await newTask.save();
+        await activity(newTask._id, req.userId, 'created', { title: newTask.title });
 
         res.status(201).json({
             message: 'Tạo công việc thành công',
@@ -183,6 +185,11 @@ exports.updateTask = async (req, res) => {
             });
         }
 
+        await activity(task._id, req.userId, 'updated', { fields: Object.keys(updateData) });
+        if (updateData.status === 'completed') {
+            const recipients = [...task.assigneeIds.map(String), String(task.createdBy)].filter(id => id !== String(req.userId));
+            await notify(recipients, task._id, 'completed', 'Công việc đã hoàn thành', `Công việc "${task.title}" đã hoàn thành`);
+        }
         res.json({
             message: 'Cập nhật công việc thành công',
             task
@@ -217,6 +224,7 @@ exports.deleteTask = async (req, res) => {
             });
         }
 
+        await activity(task._id, req.userId, 'deleted', { title: task.title });
         res.json({
             message: 'Đã xóa công việc thành công'
         });
@@ -284,6 +292,9 @@ exports.shareTask = async (req, res) => {
         }
 
         await task.save();
+        await activity(task._id, req.userId, 'shared', { userId, permission });
+        await notify([userId], task._id, 'shared', 'Công việc được chia sẻ với bạn', `Bạn được chia sẻ công việc: ${task.title}`);
+        await logEmailIntent(task._id, user, 'shared', `Công việc được chia sẻ với bạn: ${task.title}`);
 
         res.json({
             message: 'Chia sẻ công việc thành công',

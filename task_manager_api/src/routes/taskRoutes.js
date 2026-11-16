@@ -17,6 +17,10 @@ const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
 
+// Nghiệp vụ giao việc và lịch sử hoạt động (đặt trước /:id).
+router.use('/:id/assignees', require('./assignmentRoutes'));
+router.use('/:id/activities', require('./activityRoutes'));
+
 // API chia sẻ công việc
 router.post('/:id/share', shareTask);
 router.get('/:id/shares', getTaskShares);

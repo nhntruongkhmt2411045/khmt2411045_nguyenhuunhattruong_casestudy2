@@ -49,7 +49,6 @@ class _TaskScreenState extends State<TaskScreen> {
     });
 
     try {
-      // Lấy danh sách công việc trước
       final loadedTasks = await TaskService.getTasks();
 
       if (!mounted) return;
@@ -61,7 +60,6 @@ class _TaskScreenState extends State<TaskScreen> {
         isLoading = false;
       });
 
-      // Lấy thông tin người dùng riêng
       try {
         final profile = await AuthService().getProfile();
         final userData = profile?['user'] ?? profile;
@@ -491,6 +489,21 @@ class _TaskScreenState extends State<TaskScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
 
+      // Nút tạo công việc hình vuông nhỏ ở góc dưới bên phải
+      floatingActionButton: FloatingActionButton(
+        mini: true,
+        onPressed: openCreateTask,
+        backgroundColor: const Color(0xFF315EFB),
+        foregroundColor: Colors.white,
+        tooltip: 'Tạo công việc',
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.add, size: 26),
+      ),
+      floatingActionButtonLocation:
+      FloatingActionButtonLocation.endFloat,
+
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -513,19 +526,12 @@ class _TaskScreenState extends State<TaskScreen> {
         ],
       ),
 
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: openCreateTask,
-        backgroundColor: const Color(0xFF315EFB),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add),
-        label: const Text('Tạo công việc'),
-      ),
-
       body: Column(
         children: [
+          // KHU VỰC TÌM KIẾM VÀ LỌC
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -648,6 +654,7 @@ class _TaskScreenState extends State<TaskScreen> {
             ),
           ),
 
+          // DANH SÁCH CÔNG VIỆC
           Expanded(
             child: isLoading && tasks.isEmpty
                 ? const Center(
@@ -699,7 +706,7 @@ class _TaskScreenState extends State<TaskScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Nhấn "Tạo công việc" để bắt đầu',
+                    'Nhấn nút + để tạo công việc',
                   ),
                 ],
               ),
@@ -711,7 +718,7 @@ class _TaskScreenState extends State<TaskScreen> {
                   16,
                   16,
                   16,
-                  90,
+                  80,
                 ),
                 itemCount: visibleTasks.length,
                 itemBuilder: (context, index) {

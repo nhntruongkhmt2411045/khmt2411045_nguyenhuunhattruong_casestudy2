@@ -10,7 +10,7 @@ import 'auth_service.dart';
 class TaskService {
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:5000/api';
+      return 'http://127.0.0.1:5000/api';
     }
     return 'http://10.0.2.2:5000/api';
   }
@@ -20,7 +20,9 @@ class TaskService {
     final token = await AuthService().getToken();
 
     if (token == null || token.isEmpty) {
-      throw Exception('Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn');
+      throw Exception(
+        'Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn',
+      );
     }
 
     return {
@@ -31,64 +33,106 @@ class TaskService {
 
   // Xử lý phản hồi API
   static dynamic _decodeResponse(http.Response response) {
-    final body = response.body.isNotEmpty
-        ? jsonDecode(response.body)
-        : null;
+    dynamic body;
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+    try {
+      body = response.body.isNotEmpty
+          ? jsonDecode(response.body)
+          : null;
+    } catch (_) {
+      throw Exception('Backend trả về dữ liệu JSON không hợp lệ');
+    }
+
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300) {
       final message = body is Map
           ? body['message'] ?? body['error']
           : null;
 
-      throw Exception(message ?? 'Lỗi API: ${response.statusCode}');
+      throw Exception(
+        message ?? 'Lỗi API: ${response.statusCode}',
+      );
     }
 
     return body;
   }
 
-  // 1. Lấy danh sách công việc
+  // Chuẩn hóa danh sách công việc từ API
+  static List<dynamic> _extractTaskList(dynamic data) {
+    if (data is List) return data;
+
+    if (data is Map) {
+      if (data['tasks'] is List) {
+        return data['tasks'];
+      }
+
+      if (data['data'] is List) {
+        return data['data'];
+      }
+    }
+
+    throw Exception(
+      'API không trả về danh sách công việc hợp lệ',
+    );
+  }
+
+  // Lấy danh sách công việc
   static Future<List<Task>> getTasks({
     String? status,
     String? priority,
     String? q,
   }) async {
-    final query = <String, String>{};
+    try {
+      final query = <String, String>{};
 
-    if (status != null && status.isNotEmpty) {
-      query['status'] = status;
+      if (status != null && status.isNotEmpty) {
+        query['status'] = status;
+      }
+
+      if (priority != null && priority.isNotEmpty) {
+        query['priority'] = priority;
+      }
+
+      if (q != null && q.isNotEmpty) {
+        query['q'] = q;
+      }
+
+      final uri = Uri.parse('$baseUrl/tasks').replace(
+        queryParameters: query.isEmpty ? null : query,
+      );
+
+      debugPrint('========== GET TASKS ==========');
+      debugPrint('GET TASKS URL: $uri');
+
+      final response = await http.get(
+        uri,
+        headers: await _headers(),
+      );
+
+      debugPrint('GET TASKS STATUS: ${response.statusCode}');
+      debugPrint('GET TASKS BODY: ${response.body}');
+
+      final data = _decodeResponse(response);
+      final taskList = _extractTaskList(data);
+
+      final tasks = taskList.map((item) {
+        return Task.fromJson(
+          Map<String, dynamic>.from(item),
+        );
+      }).toList();
+
+      debugPrint('SỐ CÔNG VIỆC TẢI ĐƯỢC: ${tasks.length}');
+      debugPrint('========== END GET TASKS ==========');
+
+      return tasks;
+    } catch (e, stackTrace) {
+      debugPrint('LỖI GET TASKS: $e');
+      debugPrint('STACK TRACE: $stackTrace');
+      rethrow;
     }
-
-    if (priority != null && priority.isNotEmpty) {
-      query['priority'] = priority;
-    }
-
-    if (q != null && q.isNotEmpty) {
-      query['q'] = q;
-    }
-
-    final uri = Uri.parse('$baseUrl/tasks').replace(
-      queryParameters: query.isEmpty ? null : query,
-    );
-
-    final response = await http.get(
-      uri,
-      headers: await _headers(),
-    );
-
-    final data = _decodeResponse(response);
-
-    if (data is! List) {
-      throw Exception('Dữ liệu danh sách công việc không hợp lệ');
-    }
-
-    return data
-        .map((item) => Task.fromJson(
-      Map<String, dynamic>.from(item),
-    ))
-        .toList();
   }
 
-  // 2. Lấy chi tiết công việc
+  // Lấy chi tiết công việc
   static Future<Task> getTaskById(String taskId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/tasks/$taskId'),
@@ -106,13 +150,16 @@ class TaskService {
     );
   }
 
-  // 3. Tạo công việc
+  // Tạo công việc
   static Future<Task> createTask(Task task) async {
     final response = await http.post(
       Uri.parse('$baseUrl/tasks'),
       headers: await _headers(),
       body: jsonEncode(task.toJson()),
     );
+
+    debugPrint('CREATE TASK STATUS: ${response.statusCode}');
+    debugPrint('CREATE TASK BODY: ${response.body}');
 
     final data = _decodeResponse(response);
 
@@ -125,7 +172,7 @@ class TaskService {
     );
   }
 
-  // 4. Cập nhật công việc
+  // Cập nhật công việc
   static Future<Task> updateTask(Task task) async {
     final response = await http.put(
       Uri.parse('$baseUrl/tasks/${task.id}'),
@@ -144,7 +191,7 @@ class TaskService {
     );
   }
 
-  // 5. Xóa công việc
+  // Xóa công việc
   static Future<void> deleteTask(String taskId) async {
     final response = await http.delete(
       Uri.parse('$baseUrl/tasks/$taskId'),
@@ -154,7 +201,7 @@ class TaskService {
     _decodeResponse(response);
   }
 
-  // 6. Tìm kiếm người dùng
+  // Tìm kiếm người dùng
   static Future<List<Map<String, dynamic>>> searchUsers(
       String keyword,
       ) async {
@@ -180,7 +227,7 @@ class TaskService {
     return [];
   }
 
-  // 7. Chia sẻ công việc
+  // Chia sẻ công việc
   static Future<void> shareTask(
       String taskId,
       String userId, {
@@ -198,7 +245,7 @@ class TaskService {
     _decodeResponse(response);
   }
 
-  // 8. Lấy danh sách người được chia sẻ
+  // Lấy danh sách người được chia sẻ
   static Future<List<TaskShare>> getTaskShares(
       String taskId,
       ) async {
@@ -216,13 +263,15 @@ class TaskService {
         : [];
 
     return (shares as List)
-        .map((item) => TaskShare.fromJson(
-      Map<String, dynamic>.from(item),
-    ))
+        .map(
+          (item) => TaskShare.fromJson(
+        Map<String, dynamic>.from(item),
+      ),
+    )
         .toList();
   }
 
-  // 9. Thay đổi quyền chia sẻ
+  // Thay đổi quyền chia sẻ
   static Future<void> updateTaskShare(
       String taskId,
       String userId,
@@ -239,7 +288,7 @@ class TaskService {
     _decodeResponse(response);
   }
 
-  // 10. Thu hồi quyền chia sẻ
+  // Thu hồi quyền chia sẻ
   static Future<void> removeTaskShare(
       String taskId,
       String userId,

@@ -19,6 +19,8 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 
 // Routes người dùng
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/statistics', require('./routes/statisticsRoutes'));
 
 // Kiểm tra server
 app.get('/', (req, res) => {
