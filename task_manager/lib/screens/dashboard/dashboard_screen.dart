@@ -16,12 +16,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const DashboardHome(),
-    const TaskScreen(),
-    const NotificationScreen(),
-    const ProfileScreen(),
-  ];
+  int _dashboardVersion = 0;
+  int _taskVersion = 0;
 
   void _handleBack(bool didPop) {
     if (didPop) return;
@@ -29,8 +25,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (_selectedIndex != 0) {
       setState(() {
         _selectedIndex = 0;
+        _dashboardVersion++;
       });
     }
+  }
+
+  void _selectTab(int index) {
+    if (index == _selectedIndex) return;
+
+    setState(() {
+      _selectedIndex = index;
+
+      if (index == 0) {
+        _dashboardVersion++;
+      }
+
+      if (index == 1) {
+        _taskVersion++;
+      }
+    });
   }
 
   @override
@@ -43,15 +56,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Scaffold(
         body: IndexedStack(
           index: _selectedIndex,
-          children: _screens,
+          children: [
+            DashboardHome(
+              key: ValueKey('dashboard_$_dashboardVersion'),
+            ),
+            TaskScreen(
+              key: ValueKey('tasks_$_taskVersion'),
+            ),
+            const NotificationScreen(),
+            const ProfileScreen(),
+          ],
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              _selectedIndex = index;
-            });
-          },
+          onDestinationSelected: _selectTab,
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.home_outlined),

@@ -7,222 +7,351 @@ import 'task_activity_screen.dart';
 import 'share_task_screen.dart';
 
 class TaskDetailScreen extends StatefulWidget {
-final String taskId;
+  final String taskId;
 
-const TaskDetailScreen({
-super.key,
-required this.taskId,
-});
+  const TaskDetailScreen({
+    super.key,
+    required this.taskId,
+  });
 
-@override
-State<TaskDetailScreen> createState() => _TaskDetailScreenState();
+  @override
+  State<TaskDetailScreen> createState() => _TaskDetailScreenState();
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
-late Future<Task> _future;
+  late Future<Task> _future;
 
-@override
-void initState() {
-super.initState();
-_future = TaskService.getTaskById(widget.taskId);
-}
+  bool _updatingStatus = false;
+  String? _selectedStatus;
 
-String _date(DateTime? value) {
-if (value == null) return 'Chưa thiết lập';
+  final List<String> _statuses = [
+    'Chưa thực hiện',
+    'Đang thực hiện',
+    'Hoàn thành',
+  ];
 
-return '${value.day.toString().padLeft(2, '0')}/'
-'${value.month.toString().padLeft(2, '0')}/'
-'${value.year}';
-}
+  @override
+  void initState() {
+    super.initState();
+    _future = TaskService.getTaskById(widget.taskId);
+  }
 
-void _reload() {
-setState(() {
-_future = TaskService.getTaskById(widget.taskId);
-});
-}
+  String _date(DateTime? value) {
+    if (value == null) return 'Chưa thiết lập';
 
-Future<void> _openShare() async {
-await Navigator.push(
-context,
-MaterialPageRoute(
-builder: (_) => ShareTaskScreen(taskId: widget.taskId),
-),
-);
+    return '${value.day.toString().padLeft(2, '0')}/'
+        '${value.month.toString().padLeft(2, '0')}/'
+        '${value.year}';
+  }
 
-if (!mounted) return;
-_reload();
-}
+  void _reload() {
+    setState(() {
+      _selectedStatus = null;
+      _future = TaskService.getTaskById(widget.taskId);
+    });
+  }
 
-@override
-Widget build(BuildContext context) {
-return Scaffold(
-appBar: AppBar(
-title: const Text('Chi tiết công việc'),
-actions: [
-IconButton(
-tooltip: 'Chia sẻ công việc',
-icon: const Icon(Icons.share),
-onPressed: _openShare,
-),
-],
-),
-body: FutureBuilder<Task>(
-future: _future,
-builder: (context, snapshot) {
-if (snapshot.connectionState == ConnectionState.waiting) {
-return const Center(
-child: CircularProgressIndicator(),
-);
-}
+  Future<void> _openShare() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ShareTaskScreen(taskId: widget.taskId),
+      ),
+    );
 
-if (snapshot.hasError) {
-return Center(
-child: Padding(
-padding: const EdgeInsets.all(24),
-child: Column(
-mainAxisSize: MainAxisSize.min,
-children: [
-Text(
-'Không tải được công việc: ${snapshot.error}',
-textAlign: TextAlign.center,
-),
-const SizedBox(height: 12),
-TextButton(
-onPressed: _reload,
-child: const Text('Thử lại'),
-),
-],
-),
-),
-);
-}
+    if (!mounted) return;
+    _reload();
+  }
 
-if (!snapshot.hasData) {
-return const Center(
-child: Text('Không tìm thấy công việc'),
-);
-}
+  // Đổi trạng thái và lưu xuống MongoDB
+  Future<void> _changeStatus(String? status) async {
+    if (status == null || _updatingStatus) return;
 
-final task = snapshot.data!;
+    setState(() {
+      _updatingStatus = true;
+    });
 
-return ListView(
-padding: const EdgeInsets.all(20),
-children: [
-Text(
-task.title,
-style: const TextStyle(
-fontSize: 24,
-fontWeight: FontWeight.bold,
-),
-),
-const SizedBox(height: 16),
+    try {
+      await TaskService.updateTaskStatus(
+        widget.taskId,
+        status,
+      );
 
-Wrap(
-spacing: 8,
-children: [
-Chip(label: Text(task.status)),
-Chip(label: Text('Ưu tiên ${task.priority}')),
-],
-),
+      if (!mounted) return;
 
-const SizedBox(height: 20),
+      setState(() {
+        _selectedStatus = null;
+        _future = TaskService.getTaskById(widget.taskId);
+      });
 
-const Text(
-'Mô tả',
-style: TextStyle(fontWeight: FontWeight.bold),
-),
-const SizedBox(height: 6),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cập nhật trạng thái thành công'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
 
-Text(
-task.description.isEmpty
-? 'Không có mô tả.'
-    : task.description,
-),
+      setState(() {
+        _selectedStatus = null;
+      });
 
-const Divider(height: 32),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Không thể đổi trạng thái: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _updatingStatus = false;
+        });
+      }
+    }
+  }
 
-_info(
-'Ngày bắt đầu',
-_date(task.startDate),
-Icons.play_circle_outline,
-),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Chi tiết công việc'),
+        actions: [
+          IconButton(
+            tooltip: 'Chia sẻ công việc',
+            icon: const Icon(Icons.share),
+            onPressed: _openShare,
+          ),
+        ],
+      ),
+      body: FutureBuilder<Task>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
-_info(
-'Hạn hoàn thành',
-_date(task.dueDate),
-Icons.event,
-),
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Không tải được công việc: ${snapshot.error}',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _reload,
+                      child: const Text('Thử lại'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
-_info(
-'Người tạo',
-task.creator,
-Icons.person_outline,
-),
+          if (!snapshot.hasData) {
+            return const Center(
+              child: Text('Không tìm thấy công việc'),
+            );
+          }
 
-_info(
-'Người phụ trách chính',
-task.assignee.isEmpty
-? 'Chưa phân công'
-    : task.assignee,
-Icons.assignment_ind_outlined,
-),
+          final task = snapshot.data!;
 
-_info(
-'Số người được giao',
-'${task.assigneeIds.length}',
-Icons.groups_outlined,
-),
+          final currentStatus = _selectedStatus ?? task.status;
 
-_info(
-'Số người được chia sẻ',
-'${task.sharedWith.length}',
-Icons.share_outlined,
-),
+          final validStatus = _statuses.contains(currentStatus)
+              ? currentStatus
+              : _statuses.first;
 
-const SizedBox(height: 20),
+          return ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                task.title,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
 
-OutlinedButton.icon(
-onPressed: () {
-Navigator.push(
-context,
-MaterialPageRoute(
-builder: (_) => TaskActivityScreen(task: task),
-),
-);
-},
-icon: const Icon(Icons.history),
-label: const Text('Xem lịch sử hoạt động'),
-),
+              const SizedBox(height: 16),
 
-const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  Chip(label: Text(task.status)),
+                  Chip(label: Text('Ưu tiên ${task.priority}')),
+                ],
+              ),
 
-ElevatedButton.icon(
-onPressed: _openShare,
-icon: const Icon(Icons.share),
-label: const Text('Chia sẻ công việc'),
-),
-],
-);
-},
-),
-);
-}
+              const SizedBox(height: 24),
 
-Widget _info(String label, String value, IconData icon) {
-return ListTile(
-contentPadding: EdgeInsets.zero,
-leading: Icon(icon),
-title: Text(
-label,
-style: const TextStyle(
-fontSize: 12,
-color: Colors.grey,
-),
-),
-subtitle: Text(
-value,
-style: const TextStyle(fontSize: 15),
-),
-);
-}
+              const Text(
+                'Cập nhật trạng thái',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              DropdownButtonFormField<String>(
+                initialValue: validStatus,
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.sync),
+                  labelText: 'Chọn trạng thái',
+                ),
+                items: _statuses.map((status) {
+                  return DropdownMenuItem<String>(
+                    value: status,
+                    child: Text(status),
+                  );
+                }).toList(),
+                onChanged: _updatingStatus
+                    ? null
+                    : (value) {
+                        setState(() {
+                          _selectedStatus = value;
+                        });
+                      },
+              ),
+
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _updatingStatus ||
+                          validStatus == task.status
+                      ? null
+                      : () => _changeStatus(validStatus),
+                  icon: _updatingStatus
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Icon(Icons.save),
+                  label: Text(
+                    _updatingStatus
+                        ? 'Đang cập nhật...'
+                        : 'Lưu trạng thái',
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Mô tả',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 6),
+
+              Text(
+                task.description.isEmpty
+                    ? 'Không có mô tả.'
+                    : task.description,
+              ),
+
+              const Divider(height: 32),
+
+              _info(
+                'Ngày bắt đầu',
+                _date(task.startDate),
+                Icons.play_circle_outline,
+              ),
+
+              _info(
+                'Hạn hoàn thành',
+                _date(task.dueDate),
+                Icons.event,
+              ),
+
+              _info(
+                'Người tạo',
+                task.creator,
+                Icons.person_outline,
+              ),
+
+              _info(
+                'Người phụ trách chính',
+                task.assignee.isEmpty
+                    ? 'Chưa phân công'
+                    : task.assignee,
+                Icons.assignment_ind_outlined,
+              ),
+
+              _info(
+                'Số người được giao',
+                '${task.assigneeIds.length}',
+                Icons.groups_outlined,
+              ),
+
+              _info(
+                'Số người được chia sẻ',
+                '${task.sharedWith.length}',
+                Icons.share_outlined,
+              ),
+
+              const SizedBox(height: 20),
+
+              OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TaskActivityScreen(task: task),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.history),
+                label: const Text('Xem lịch sử hoạt động'),
+              ),
+
+              const SizedBox(height: 12),
+
+              ElevatedButton.icon(
+                onPressed: _openShare,
+                icon: const Icon(Icons.share),
+                label: const Text('Chia sẻ công việc'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _info(String label, String value, IconData icon) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.grey,
+        ),
+      ),
+      subtitle: Text(
+        value,
+        style: const TextStyle(fontSize: 15),
+      ),
+    );
+  }
 }

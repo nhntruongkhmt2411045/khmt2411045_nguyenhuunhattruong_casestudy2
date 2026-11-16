@@ -35,6 +35,15 @@ class ExtraService {
   static Future<Map<String, dynamic>> taskStats() async => Map<String, dynamic>.from(_decode(await http.get(Uri.parse('$baseUrl/statistics/tasks'), headers: await _headers())));
   static Future<Map<String, dynamic>> assignmentStats() async => Map<String, dynamic>.from(_decode(await http.get(Uri.parse('$baseUrl/statistics/assignments'), headers: await _headers())));
   static Future<Map<String, dynamic>> deadlineStats() async => Map<String, dynamic>.from(_decode(await http.get(Uri.parse('$baseUrl/statistics/deadlines'), headers: await _headers())));
+  // E2: Thống kê công việc được giao và đang phụ trách
+  static Future<Map<String, dynamic>> assignmentDetailStats() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/statistics/assignment-details'),
+      headers: await _headers(),
+    );
+
+    return Map<String, dynamic>.from(_decode(response));
+  }
   static Future<List<Map<String, dynamic>>> notifications() async => List<Map<String, dynamic>>.from((_decode(await http.get(Uri.parse('$baseUrl/notifications'), headers: await _headers())) as List).map((e) => Map<String, dynamic>.from(e)));
   static Future<int> unreadCount() async => ( _decode(await http.get(Uri.parse('$baseUrl/notifications/unread-count'), headers: await _headers()))['count'] as num).toInt();
   static Future<void> markRead(String id) async => _decode(await http.patch(Uri.parse('$baseUrl/notifications/$id/read'), headers: await _headers()));

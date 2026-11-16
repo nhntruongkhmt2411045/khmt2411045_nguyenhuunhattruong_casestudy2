@@ -191,6 +191,34 @@ class TaskService {
     );
   }
 
+  // Đổi trạng thái công việc
+  // Người tạo và người được giao đều có quyền sử dụng.
+  static Future<Task> updateTaskStatus(
+      String taskId,
+      String status,
+      ) async {
+    final response = await http.patch(
+      Uri.parse('$baseUrl/tasks/$taskId/status'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'status': Task.statusToApi(status),
+      }),
+    );
+
+    debugPrint('UPDATE TASK STATUS CODE: ${response.statusCode}');
+    debugPrint('UPDATE TASK STATUS BODY: ${response.body}');
+
+    final data = _decodeResponse(response);
+
+    final taskData = data is Map && data['task'] != null
+        ? data['task']
+        : data;
+
+    return Task.fromJson(
+      Map<String, dynamic>.from(taskData),
+    );
+  }
+
   // Xóa công việc
   static Future<void> deleteTask(String taskId) async {
     final response = await http.delete(

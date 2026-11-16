@@ -19,11 +19,13 @@ class _DashboardHomeState extends State<DashboardHome> {
     _load = _loadStats();
   }
 
+  // E1 + E2: Tải dữ liệu thống kê
   Future<List<Map<String, dynamic>>> _loadStats() async {
     return Future.wait([
       ExtraService.taskStats(),
       ExtraService.assignmentStats(),
       ExtraService.deadlineStats(),
+      ExtraService.assignmentDetailStats(),
     ]);
   }
 
@@ -35,6 +37,7 @@ class _DashboardHomeState extends State<DashboardHome> {
 
   int _number(dynamic value) => (value as num? ?? 0).toInt();
 
+  // Thẻ chỉ số
   Widget _metric(
       String label,
       String value,
@@ -86,6 +89,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
+  // Biểu đồ tròn E1
   Widget _statusChart(Map<String, dynamic> stats) {
     final todo = _number(stats['todo']);
     final progress = _number(stats['in_progress']);
@@ -112,7 +116,9 @@ class _DashboardHomeState extends State<DashboardHome> {
             if (total == 0)
               const SizedBox(
                 height: 180,
-                child: Center(child: Text('Chưa có dữ liệu công việc')),
+                child: Center(
+                  child: Text('Chưa có dữ liệu công việc'),
+                ),
               )
             else
               SizedBox(
@@ -130,7 +136,8 @@ class _DashboardHomeState extends State<DashboardHome> {
                                 (item) => PieChartSectionData(
                               value: item.$2.toDouble(),
                               color: item.$3,
-                              title: '${(item.$2 * 100 / total).round()}%',
+                              title:
+                              '${(item.$2 * 100 / total).round()}%',
                               radius: 48,
                               titleStyle: const TextStyle(
                                 color: Colors.white,
@@ -189,6 +196,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
+  // Biểu đồ cột E1
   Widget _barChart(Map<String, dynamic> stats) {
     final values = [
       _number(stats['todo']),
@@ -244,11 +252,17 @@ class _DashboardHomeState extends State<DashboardHome> {
                         showTitles: true,
                         reservedSize: 38,
                         getTitlesWidget: (value, meta) {
-                          const labels = ['Chưa làm', 'Đang làm', 'Xong'];
+                          const labels = [
+                            'Chưa làm',
+                            'Đang làm',
+                            'Xong',
+                          ];
                           final index = value.toInt();
+
                           if (index < 0 || index >= labels.length) {
                             return const SizedBox.shrink();
                           }
+
                           return Padding(
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
@@ -288,6 +302,7 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
+  // Cảnh báo thời hạn E1
   Widget _deadlineCard(Map<String, dynamic> deadlines) {
     final overdueTasks =
         deadlines['overdueTasks'] as List? ?? [];
@@ -354,6 +369,127 @@ class _DashboardHomeState extends State<DashboardHome> {
     );
   }
 
+  // E2: Một chỉ số trạng thái
+  Widget _statusItem(String label, int value, Color color) {
+    return Column(
+      children: [
+        Text(
+          '$value',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  // E2: Thống kê chi tiết công việc được giao / phụ trách
+  Widget _assignmentDetailCard(
+      String title,
+      Map<String, dynamic> data,
+      IconData icon,
+      Color color,
+      ) {
+    final todo = _number(data['todo']);
+    final progress = _number(data['in_progress']);
+    final completed = _number(data['completed']);
+    final total = _number(data['total']);
+    final rate = _number(data['completionRate']);
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 26),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Tổng công việc'),
+                Text(
+                  '$total',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: total == 0 ? 0 : rate / 100,
+                minHeight: 9,
+                color: color,
+                backgroundColor: Colors.grey.shade200,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Tỷ lệ hoàn thành: $rate%',
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: _statusItem(
+                    'Chưa làm',
+                    todo,
+                    Colors.orange,
+                  ),
+                ),
+                Expanded(
+                  child: _statusItem(
+                    'Đang làm',
+                    progress,
+                    Colors.blue,
+                  ),
+                ),
+                Expanded(
+                  child: _statusItem(
+                    'Hoàn thành',
+                    completed,
+                    Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -373,7 +509,9 @@ class _DashboardHomeState extends State<DashboardHome> {
         future: _load,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           if (snapshot.hasError) {
@@ -399,9 +537,24 @@ class _DashboardHomeState extends State<DashboardHome> {
             );
           }
 
+          if (!snapshot.hasData || snapshot.data!.length < 4) {
+            return const Center(
+              child: Text('Dữ liệu thống kê không đầy đủ'),
+            );
+          }
+
           final stats = snapshot.data![0];
           final assignments = snapshot.data![1];
           final deadlines = snapshot.data![2];
+          final assignmentDetails = snapshot.data![3];
+
+          final assignedDetails = Map<String, dynamic>.from(
+            assignmentDetails['assigned'] ?? {},
+          );
+
+          final responsibleDetails = Map<String, dynamic>.from(
+            assignmentDetails['responsible'] ?? {},
+          );
 
           final total = _number(stats['total']);
           final completed = _number(stats['completed']);
@@ -422,10 +575,13 @@ class _DashboardHomeState extends State<DashboardHome> {
                 const SizedBox(height: 6),
                 Text(
                   'Theo dõi tiến độ và hiệu suất công việc của bạn.',
-                  style: TextStyle(color: Colors.grey.shade600),
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                  ),
                 ),
                 const SizedBox(height: 16),
 
+                // Tổng quan E1
                 Row(
                   children: [
                     _metric(
@@ -452,7 +608,9 @@ class _DashboardHomeState extends State<DashboardHome> {
                       children: [
                         const Text(
                           'Tiến độ hoàn thành',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                         const SizedBox(height: 12),
                         ClipRRect(
@@ -474,13 +632,16 @@ class _DashboardHomeState extends State<DashboardHome> {
                   ),
                 ),
 
+                // Biểu đồ E1
                 _sectionTitle('Biểu đồ thống kê'),
                 _statusChart(stats),
                 const SizedBox(height: 12),
                 _barChart(stats),
 
+                // Hạn công việc E1
                 _deadlineCard(deadlines),
 
+                // Phân công E1
                 _sectionTitle('Phân công & phụ trách'),
                 Row(
                   children: [
@@ -504,6 +665,25 @@ class _DashboardHomeState extends State<DashboardHome> {
                     ),
                   ],
                 ),
+
+                // Thống kê chi tiết E2
+                const SizedBox(height: 12),
+                _sectionTitle('Thống kê chi tiết công việc'),
+
+                _assignmentDetailCard(
+                  'Công việc được giao cho bạn',
+                  assignedDetails,
+                  Icons.assignment_ind_outlined,
+                  Colors.blue,
+                ),
+
+                _assignmentDetailCard(
+                  'Công việc bạn phụ trách chính',
+                  responsibleDetails,
+                  Icons.star_outline,
+                  Colors.orange,
+                ),
+
                 const SizedBox(height: 24),
               ],
             ),
