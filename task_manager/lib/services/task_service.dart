@@ -300,4 +300,42 @@ class TaskService {
 
     _decodeResponse(response);
   }
+
+
+  // Lấy danh sách người được giao
+  static Future<Map<String, dynamic>> getAssignees(String taskId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks/$taskId/assignees'),
+      headers: await _headers(),
+    );
+    final data = _decodeResponse(response);
+    if (data is! Map) return {'assignees': <dynamic>[], 'primaryAssignee': null};
+    return Map<String, dynamic>.from(data);
+  }
+
+  // Giao công việc cho nhiều người và chọn người phụ trách chính
+  static Future<void> setAssignees(
+    String taskId,
+    List<String> userIds, {
+    String? primaryAssigneeId,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/tasks/$taskId/assignees'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'userIds': userIds,
+        'primaryAssigneeId': primaryAssigneeId,
+      }),
+    );
+    _decodeResponse(response);
+  }
+
+  static Future<void> removeAssignee(String taskId, String userId) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/tasks/$taskId/assignees/$userId'),
+      headers: await _headers(),
+    );
+    _decodeResponse(response);
+  }
+
 }
