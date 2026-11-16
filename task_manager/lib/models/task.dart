@@ -139,7 +139,10 @@ class Task {
           ? DateTime.tryParse(json['dueDate'].toString())
           : null,
       creator: creatorData is Map
-          ? creatorData['_id']?.toString() ?? ''
+          ? creatorData['fullName']?.toString() ??
+          creatorData['email']?.toString() ??
+          creatorData['_id']?.toString() ??
+          ''
           : creatorData?.toString() ?? '',
       assignee: primaryAssigneeId,
       assigneeIds: parsedAssigneeIds,

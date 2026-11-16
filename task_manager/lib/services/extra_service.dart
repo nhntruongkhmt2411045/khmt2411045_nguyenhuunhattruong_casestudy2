@@ -16,6 +16,21 @@ class ExtraService {
       throw Exception(data is Map ? data['message'] ?? 'Lỗi máy chủ' : 'Lỗi máy chủ');
     }
     return data;
+  }  static Future<List<Map<String, dynamic>>> taskActivities(
+      String taskId,
+      ) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks/$taskId/activities'),
+      headers: await _headers(),
+    );
+
+    final data = _decode(response);
+
+    return List<Map<String, dynamic>>.from(
+      (data as List).map(
+            (item) => Map<String, dynamic>.from(item),
+      ),
+    );
   }
   static Future<Map<String, dynamic>> taskStats() async => Map<String, dynamic>.from(_decode(await http.get(Uri.parse('$baseUrl/statistics/tasks'), headers: await _headers())));
   static Future<Map<String, dynamic>> assignmentStats() async => Map<String, dynamic>.from(_decode(await http.get(Uri.parse('$baseUrl/statistics/assignments'), headers: await _headers())));
