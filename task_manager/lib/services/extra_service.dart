@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 
 class ExtraService {
-  static String get baseUrl => kIsWeb ? 'http://localhost:5000/api' : 'http://10.0.2.2:5000/api';
+  static String get baseUrl => kIsWeb ? 'http://localhost:3000/api' : 'http://10.0.2.2:3000/api';
   static Future<Map<String, String>> _headers() async {
     final token = await AuthService().getToken();
     if (token == null || token.isEmpty) throw Exception('Phiên đăng nhập đã hết hạn');
