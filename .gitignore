@@ -17,3 +17,6 @@ local.properties
 # Node.js dependencies
 node_modules/
 
+
+.env
+**/.env
