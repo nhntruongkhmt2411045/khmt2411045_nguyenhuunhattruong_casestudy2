@@ -423,3 +423,87 @@ exports.removeTaskShare = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 };
+
+// 10. Đổi trạng thái công việc
+exports.updateTaskStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        // Kiểm tra ID công việc
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                message: 'ID công việc không hợp lệ'
+            });
+        }
+
+        // Chỉ chấp nhận 3 trạng thái hợp lệ
+        const allowedStatuses = [
+            'todo',
+            'in_progress',
+            'completed'
+        ];
+
+        if (!allowedStatuses.includes(status)) {
+            return res.status(400).json({
+                message: 'Trạng thái công việc không hợp lệ'
+            });
+        }
+
+        // Chỉ người tạo hoặc người được giao mới được đổi trạng thái
+        const task = await Task.findOneAndUpdate(
+            {
+                _id: id,
+                $or: [
+                    { createdBy: req.userId },
+                    { assigneeIds: req.userId }
+                ]
+            },
+            {
+                $set: { status }
+            },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!task) {
+            return res.status(404).json({
+                message: 'Không tìm thấy công việc hoặc bạn không có quyền đổi trạng thái'
+            });
+        }
+
+        // Ghi nhận lịch sử hoạt động
+        await activity(task._id, req.userId, 'updated', {
+            fields: ['status'],
+            status: task.status
+        });
+
+        // Thông báo khi công việc hoàn thành
+        if (status === 'completed') {
+            const recipients = [
+                ...task.assigneeIds.map(String),
+                String(task.createdBy)
+            ].filter(userId => userId !== String(req.userId));
+
+            await notify(
+                recipients,
+                task._id,
+                'completed',
+                'Công việc đã hoàn thành',
+                `Công việc "${task.title}" đã hoàn thành`
+            );
+        }
+
+        return res.json({
+            message: 'Đổi trạng thái công việc thành công',
+            task
+        });
+
+    } catch (err) {
+        return res.status(500).json({
+            error: err.message
+        });
+    }
+};

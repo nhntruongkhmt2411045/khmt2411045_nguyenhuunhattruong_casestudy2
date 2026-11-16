@@ -36,3 +36,56 @@ exports.deadlineStatistics = async (req, res) => {
     res.json({ overdue, dueSoon, overdueTasks, dueSoonTasks });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
+// E2: Thống kê công việc được giao và công việc đang phụ trách
+const getStatusSummary = async (condition) => {
+    const rows = await Task.aggregate([
+        { $match: condition },
+        {
+            $group: {
+                _id: '$status',
+                count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const result = {
+        todo: 0,
+        in_progress: 0,
+        completed: 0,
+        total: 0,
+        completionRate: 0
+    };
+
+    rows.forEach(row => {
+        result[row._id] = row.count;
+        result.total += row.count;
+    });
+
+    result.completionRate = result.total
+        ? Math.round(result.completed * 100 / result.total)
+        : 0;
+
+    return result;
+};
+
+exports.assignmentDetailStatistics = async (req, res) => {
+    try {
+        const [assigned, responsible] = await Promise.all([
+            getStatusSummary({
+                assigneeIds: req.userId
+            }),
+            getStatusSummary({
+                primaryAssigneeId: req.userId
+            })
+        ]);
+
+        res.json({
+            assigned,
+            responsible
+        });
+    } catch (err) {
+        res.status(500).json({
+            message: err.message
+        });
+    }
+};

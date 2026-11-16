@@ -5,4 +5,5 @@ router.use(protect);
 router.get('/tasks', c.taskStatistics);
 router.get('/assignments', c.assignmentStatistics);
 router.get('/deadlines', c.deadlineStatistics);
+router.get('/assignment-details', c.assignmentDetailStatistics);
 module.exports = router;
